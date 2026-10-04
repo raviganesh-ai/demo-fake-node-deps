@@ -1,34 +1,55 @@
-"use strict";
+const axios = require('axios');
 
-const rp = require("request-promise");
+const JSON_PLACEHOLDER_BASE_URL = 'https://jsonplaceholder.typicode.com';
 
-const BASE_URL = process.env.EXTERNAL_API_BASE_URL || "https://jsonplaceholder.typicode.com";
+async function getTodos() {
+  const url = `${JSON_PLACEHOLDER_BASE_URL}/todos`;
 
-/**
- * Fetches every to-do item belonging to a user from the external
- * placeholder API. Uses the deprecated request-promise package, same as
- * externalUserService.
- */
-async function listTodosForUser(userId) {
-  const options = {
-    uri: `${BASE_URL}/todos`,
-    qs: { userId },
-    json: true,
-    timeout: 5000,
-  };
-  return rp(options);
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        'Accept': 'application/json'
+      },
+      validateStatus: () => true
+    });
+
+    if (response.status >= 200 && response.status < 300) {
+      return response.data;
+    }
+
+    const error = new Error(`Failed to fetch todos. Status: ${response.status}`);
+    error.statusCode = response.status;
+    throw error;
+  } catch (err) {
+    throw err;
+  }
 }
 
-/**
- * Fetches a single to-do item by id.
- */
-async function getTodoById(todoId) {
-  const options = {
-    uri: `${BASE_URL}/todos/${todoId}`,
-    json: true,
-    timeout: 5000,
-  };
-  return rp(options);
+async function createTodo(todo) {
+  const url = `${JSON_PLACEHOLDER_BASE_URL}/todos`;
+
+  try {
+    const response = await axios.post(url, todo, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      validateStatus: () => true
+    });
+
+    if (response.status >= 200 && response.status < 300) {
+      return response.data;
+    }
+
+    const error = new Error(`Failed to create todo. Status: ${response.status}`);
+    error.statusCode = response.status;
+    throw error;
+  } catch (err) {
+    throw err;
+  }
 }
 
-module.exports = { listTodosForUser, getTodoById };
+module.exports = {
+  getTodos,
+  createTodo
+};

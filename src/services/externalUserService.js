@@ -1,37 +1,34 @@
-"use strict";
+const axios = require('axios');
 
-const rp = require("request-promise");
+const JSON_PLACEHOLDER_BASE_URL = 'https://jsonplaceholder.typicode.com';
 
-const BASE_URL = process.env.EXTERNAL_API_BASE_URL || "https://jsonplaceholder.typicode.com";
+async function getExternalUser(userId) {
+  // Preserve existing behavior of returning the parsed JSON user object
+  // and propagating errors if the upstream call fails.
+  const url = `${JSON_PLACEHOLDER_BASE_URL}/users/${encodeURIComponent(userId)}`;
 
-/**
- * Fetches a single user from the external placeholder API.
- *
- * Uses `request-promise`, which wraps the deprecated `request` package in a
- * Promise interface. Both `request` and `request-promise` have been
- * deprecated since 2020 (see https://github.com/request/request/issues/3142)
- * and recommend migrating to `node-fetch`, `axios`, `got`, or the built-in
- * `fetch` (available natively from Node 18+).
- */
-async function getUserById(userId) {
-  const options = {
-    uri: `${BASE_URL}/users/${userId}`,
-    json: true,
-    timeout: 5000,
-  };
-  return rp(options);
+  try {
+    const response = await axios.get(url, {
+      // Align with typical JSON APIs; axios parses JSON automatically.
+      headers: {
+        'Accept': 'application/json'
+      },
+      validateStatus: () => true // handle non-2xx statuses manually if needed
+    });
+
+    if (response.status >= 200 && response.status < 300) {
+      return response.data;
+    }
+
+    const error = new Error(`Failed to fetch external user. Status: ${response.status}`);
+    error.statusCode = response.status;
+    throw error;
+  } catch (err) {
+    // Re-throw to let callers/tests handle errors as before.
+    throw err;
+  }
 }
 
-/**
- * Fetches every user from the external placeholder API.
- */
-async function listUsers() {
-  const options = {
-    uri: `${BASE_URL}/users`,
-    json: true,
-    timeout: 5000,
-  };
-  return rp(options);
-}
-
-module.exports = { getUserById, listUsers };
+module.exports = {
+  getExternalUser
+};
