@@ -1,46 +1,38 @@
-"use strict";
-
-const request = require("request");
+const axios = require('axios');
 
 /**
- * Sends a notification payload to a webhook URL using the deprecated,
- * callback-style `request` package directly (not request-promise), to
- * exercise both styles this legacy codebase actually uses.
+ * Sends a notification to the specified endpoint. Previously implemented with
+ * callback-style `request`; now implemented with axios while preserving the
+ * exported API shape and callback usage.
+ *
+ * @param {string} url - Notification target URL.
+ * @param {object} payload - Notification payload to POST as JSON.
+ * @param {function} callback - Node-style callback (err, result).
  */
-function sendNotification(webhookUrl, payload, callback) {
-  request(
-    {
-      method: "POST",
-      url: webhookUrl,
-      json: true,
-      body: payload,
-      timeout: 5000,
-    },
-    (error, response, body) => {
-      if (error) {
-        return callback(error);
+function sendNotification(url, payload, callback) {
+  axios
+    .post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      validateStatus: () => true
+    })
+    .then((response) => {
+      if (response.status >= 200 && response.status < 300) {
+        // Preserve behavior of passing the parsed body as the result.
+        return callback(null, response.data);
       }
-      if (response.statusCode >= 400) {
-        return callback(new Error(`Webhook responded with status ${response.statusCode}`));
-      }
-      return callback(null, body);
-    }
-  );
-}
 
-/**
- * Promise-wrapping convenience around sendNotification for callers that
- * prefer async/await over the raw callback style above.
- */
-function sendNotificationAsync(webhookUrl, payload) {
-  return new Promise((resolve, reject) => {
-    sendNotification(webhookUrl, payload, (error, body) => {
-      if (error) {
-        return reject(error);
-      }
-      return resolve(body);
+      const error = new Error(`Failed to send notification. Status: ${response.status}`);
+      error.statusCode = response.status;
+      callback(error);
+    })
+    .catch((err) => {
+      callback(err);
     });
-  });
 }
 
-module.exports = { sendNotification, sendNotificationAsync };
+module.exports = {
+  sendNotification
+};
