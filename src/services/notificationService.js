@@ -1,46 +1,45 @@
-"use strict";
+'use strict';
 
-const request = require("request");
+// Notification service that sends HTTP POST requests to an external endpoint.
+// Originally implemented with request; now uses built-in fetch.
 
 /**
- * Sends a notification payload to a webhook URL using the deprecated,
- * callback-style `request` package directly (not request-promise), to
- * exercise both styles this legacy codebase actually uses.
+ * Send a notification payload to the configured endpoint.
+ * @param {string} url - Target notification URL.
+ * @param {object} payload - JSON-serializable payload.
+ * @returns {Promise<{status: number, body: any}>}
  */
-function sendNotification(webhookUrl, payload, callback) {
-  request(
-    {
-      method: "POST",
-      url: webhookUrl,
-      json: true,
-      body: payload,
-      timeout: 5000,
+async function sendNotification(url, payload) {
+  if (!url) {
+    throw new Error('Notification URL is required');
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
     },
-    (error, response, body) => {
-      if (error) {
-        return callback(error);
-      }
-      if (response.statusCode >= 400) {
-        return callback(new Error(`Webhook responded with status ${response.statusCode}`));
-      }
-      return callback(null, body);
-    }
-  );
-}
-
-/**
- * Promise-wrapping convenience around sendNotification for callers that
- * prefer async/await over the raw callback style above.
- */
-function sendNotificationAsync(webhookUrl, payload) {
-  return new Promise((resolve, reject) => {
-    sendNotification(webhookUrl, payload, (error, body) => {
-      if (error) {
-        return reject(error);
-      }
-      return resolve(body);
-    });
+    body: JSON.stringify(payload || {})
   });
+
+  const text = await response.text();
+  let body;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch (e) {
+    body = text;
+  }
+
+  if (!response.ok) {
+    const error = new Error(`Failed to send notification: ${response.status} ${response.statusText}`);
+    error.status = response.status;
+    error.body = body;
+    throw error;
+  }
+
+  return { status: response.status, body };
 }
 
-module.exports = { sendNotification, sendNotificationAsync };
+module.exports = {
+  sendNotification
+};

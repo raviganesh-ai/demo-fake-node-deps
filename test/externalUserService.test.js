@@ -1,33 +1,52 @@
-"use strict";
+const nock = require('nock');
+const externalUserService = require('../src/services/externalUserService');
 
-const nock = require("nock");
-const { getUserById, listUsers } = require("../src/services/externalUserService");
+const BASE_URL = 'https://jsonplaceholder.typicode.com';
 
-const BASE_URL = "https://jsonplaceholder.typicode.com";
-
-afterEach(() => {
-  nock.cleanAll();
-});
-
-describe("externalUserService", () => {
-  test("getUserById returns the user from the external API", async () => {
-    const fakeUser = { id: 1, name: "Ada Lovelace" };
-    nock(BASE_URL).get("/users/1").reply(200, fakeUser);
-
-    const user = await getUserById(1);
-
-    expect(user).toEqual(fakeUser);
+describe('externalUserService', () => {
+  afterEach(() => {
+    nock.cleanAll();
   });
 
-  test("listUsers returns every user from the external API", async () => {
-    const fakeUsers = [
-      { id: 1, name: "Ada" },
-      { id: 2, name: "Grace" },
+  test('getUsers returns list of users from external API', async () => {
+    const usersMock = [
+      { id: 1, name: 'User One' },
+      { id: 2, name: 'User Two' }
     ];
-    nock(BASE_URL).get("/users").reply(200, fakeUsers);
 
-    const users = await listUsers();
+    nock(BASE_URL)
+      .get('/users')
+      .reply(200, usersMock);
 
-    expect(users).toHaveLength(2);
+    const users = await externalUserService.getUsers();
+    expect(users).toEqual(usersMock);
+  });
+
+  test('getUserById returns single user when found', async () => {
+    const userMock = { id: 1, name: 'User One' };
+
+    nock(BASE_URL)
+      .get('/users/1')
+      .reply(200, userMock);
+
+    const user = await externalUserService.getUserById(1);
+    expect(user).toEqual(userMock);
+  });
+
+  test('getUserById returns null when user not found (404)', async () => {
+    nock(BASE_URL)
+      .get('/users/999')
+      .reply(404);
+
+    const user = await externalUserService.getUserById(999);
+    expect(user).toBeNull();
+  });
+
+  test('getUsers throws on non-2xx status', async () => {
+    nock(BASE_URL)
+      .get('/users')
+      .reply(500, { error: 'server error' });
+
+    await expect(externalUserService.getUsers()).rejects.toThrow('Failed to fetch users');
   });
 });

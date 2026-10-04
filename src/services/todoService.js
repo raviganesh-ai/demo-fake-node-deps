@@ -1,34 +1,40 @@
-"use strict";
+'use strict';
 
-const rp = require("request-promise");
+// Todo service that fetches todo items from jsonplaceholder.typicode.com
+// Originally implemented with request-promise; now uses built-in fetch.
 
-const BASE_URL = process.env.EXTERNAL_API_BASE_URL || "https://jsonplaceholder.typicode.com";
+const BASE_URL = 'https://jsonplaceholder.typicode.com';
 
 /**
- * Fetches every to-do item belonging to a user from the external
- * placeholder API. Uses the deprecated request-promise package, same as
- * externalUserService.
+ * Fetch all todos.
+ * @returns {Promise<Array<object>>}
  */
-async function listTodosForUser(userId) {
-  const options = {
-    uri: `${BASE_URL}/todos`,
-    qs: { userId },
-    json: true,
-    timeout: 5000,
-  };
-  return rp(options);
+async function getTodos() {
+  const response = await fetch(`${BASE_URL}/todos`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch todos: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
 /**
- * Fetches a single to-do item by id.
+ * Fetch todos for a specific user.
+ * @param {number|string} userId
+ * @returns {Promise<Array<object>>}
  */
-async function getTodoById(todoId) {
-  const options = {
-    uri: `${BASE_URL}/todos/${todoId}`,
-    json: true,
-    timeout: 5000,
-  };
-  return rp(options);
+async function getTodosByUser(userId) {
+  const response = await fetch(`${BASE_URL}/todos?userId=${encodeURIComponent(userId)}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch todos for user ${userId}: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
-module.exports = { listTodosForUser, getTodoById };
+module.exports = {
+  getTodos,
+  getTodosByUser
+};

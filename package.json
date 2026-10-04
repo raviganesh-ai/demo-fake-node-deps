@@ -1,24 +1,18 @@
 {
   "name": "demo-fake-node-deps",
   "version": "1.0.0",
-  "private": true,
-  "description": "Fake task-notification service used as a test fixture for Genie's Dependency upgrade or replacement modernization capability - replacing the deprecated request/request-promise packages.",
+  "description": "Demo app with fake node dependencies",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "test": "jest --runInBand"
+    "test": "jest"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "request": "^2.88.2",
-    "request-promise": "^4.2.6"
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "jest": "^29.7.0",
     "nock": "^13.5.4",
     "supertest": "^6.3.4"
-  },
-  "engines": {
-    "node": ">=14"
   }
 }

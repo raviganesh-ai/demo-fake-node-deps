@@ -1,30 +1,46 @@
-"use strict";
+const nock = require('nock');
+const todoService = require('../src/services/todoService');
 
-const nock = require("nock");
-const { listTodosForUser, getTodoById } = require("../src/services/todoService");
+const BASE_URL = 'https://jsonplaceholder.typicode.com';
 
-const BASE_URL = "https://jsonplaceholder.typicode.com";
-
-afterEach(() => {
-  nock.cleanAll();
-});
-
-describe("todoService", () => {
-  test("listTodosForUser returns todos filtered by userId", async () => {
-    const fakeTodos = [{ id: 1, userId: 1, title: "Buy milk", completed: false }];
-    nock(BASE_URL).get("/todos").query({ userId: "1" }).reply(200, fakeTodos);
-
-    const todos = await listTodosForUser(1);
-
-    expect(todos).toEqual(fakeTodos);
+describe('todoService', () => {
+  afterEach(() => {
+    nock.cleanAll();
   });
 
-  test("getTodoById returns a single todo", async () => {
-    const fakeTodo = { id: 5, userId: 1, title: "Walk the dog", completed: true };
-    nock(BASE_URL).get("/todos/5").reply(200, fakeTodo);
+  test('getTodos returns list of todos from external API', async () => {
+    const todosMock = [
+      { id: 1, title: 'Todo 1' },
+      { id: 2, title: 'Todo 2' }
+    ];
 
-    const todo = await getTodoById(5);
+    nock(BASE_URL)
+      .get('/todos')
+      .reply(200, todosMock);
 
-    expect(todo).toEqual(fakeTodo);
+    const todos = await todoService.getTodos();
+    expect(todos).toEqual(todosMock);
+  });
+
+  test('getTodosByUser returns todos for specific user', async () => {
+    const todosMock = [
+      { id: 1, userId: 5, title: 'Todo 1' }
+    ];
+
+    nock(BASE_URL)
+      .get('/todos')
+      .query({ userId: 5 })
+      .reply(200, todosMock);
+
+    const todos = await todoService.getTodosByUser(5);
+    expect(todos).toEqual(todosMock);
+  });
+
+  test('getTodos throws on non-2xx response', async () => {
+    nock(BASE_URL)
+      .get('/todos')
+      .reply(500, { error: 'server error' });
+
+    await expect(todoService.getTodos()).rejects.toThrow('Failed to fetch todos');
   });
 });

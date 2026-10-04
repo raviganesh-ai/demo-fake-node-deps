@@ -1,37 +1,44 @@
-"use strict";
+'use strict';
 
-const rp = require("request-promise");
+// External user service that fetches users from jsonplaceholder.typicode.com
+// Originally implemented with request-promise; now uses built-in fetch.
 
-const BASE_URL = process.env.EXTERNAL_API_BASE_URL || "https://jsonplaceholder.typicode.com";
+const BASE_URL = 'https://jsonplaceholder.typicode.com';
 
 /**
- * Fetches a single user from the external placeholder API.
- *
- * Uses `request-promise`, which wraps the deprecated `request` package in a
- * Promise interface. Both `request` and `request-promise` have been
- * deprecated since 2020 (see https://github.com/request/request/issues/3142)
- * and recommend migrating to `node-fetch`, `axios`, `got`, or the built-in
- * `fetch` (available natively from Node 18+).
+ * Fetch all users from the external API.
+ * Returns a Promise resolving to an array of user objects.
  */
-async function getUserById(userId) {
-  const options = {
-    uri: `${BASE_URL}/users/${userId}`,
-    json: true,
-    timeout: 5000,
-  };
-  return rp(options);
+async function getUsers() {
+  const response = await fetch(`${BASE_URL}/users`);
+
+  if (!response.ok) {
+    // Preserve a clear error surface while using fetch semantics
+    throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
 /**
- * Fetches every user from the external placeholder API.
+ * Fetch a single user by ID from the external API.
+ * @param {number|string} id
+ * @returns {Promise<object>}
  */
-async function listUsers() {
-  const options = {
-    uri: `${BASE_URL}/users`,
-    json: true,
-    timeout: 5000,
-  };
-  return rp(options);
+async function getUserById(id) {
+  const response = await fetch(`${BASE_URL}/users/${id}`);
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null;
+    }
+    throw new Error(`Failed to fetch user ${id}: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
-module.exports = { getUserById, listUsers };
+module.exports = {
+  getUsers,
+  getUserById
+};
